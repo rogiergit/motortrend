@@ -1,0 +1,464 @@
+---
+title: "Motor Trend Project"
+author: "Rogier Helmus"
+
+output: html_document
+---
+```{r}
+setwd("E:\\Dev\\R\\Coursera\\7 Regression\\MotorTrend\\motortrend\\")
+library(data.table)
+library(dplyr)          # Working with tables
+library(ggplot2)        # Working with plots
+library(R.utils)
+
+```
+
+head(mtcars)
+
+#Motor Trend Analysis
+ 
+ exploring the relationship between a set of variables and miles per gallon (MPG) (outcome). They are particularly interested in the following two questions:
+
+"Is an automatic or manual transmission better for MPG"
+"Quantify the MPG difference between automatic and manual transmissions"
+
+#Executive summary
+
+
+#Data processing
+data(mtcars)
+names(mtcars)
+?mtcars
+head(mtcars)
+
+trend <- tbl_df(mtcars)
+trend$vs<-factor(trend$vs)
+trend$cyl<-factor(trend$cyl)
+trend$am<-factor(ifelse(trend$am==0, "A", "M"))
+trend$vs<-factor(ifelse(trend$vs==0, "V", "S"))
+trend$gear<-factor(trend$gear)
+trend$carb<-factor(trend$carb)
+
+
+[, 1]    mpg	 Miles/(US) gallon
+[, 2]	 cyl	 Number of cylinders
+[, 3]	 disp	 Displacement (cu.in.)
+[, 4]	 hp	 Gross horsepower
+[, 5]	 drat	 Rear axle ratio
+[, 6]	 wt	 Weight (lb/1000)
+[, 7]	 qsec	 1/4 mile time
+[, 8]	 vs	 V/S
+[, 9]	 am	 Transmission (0 = automatic, 1 = manual)
+[,10]	 gear	 Number of forward gears
+[,11]	 carb	 Number of carburetors
+
+
+qsec is a measure of performance of the car which is determined by the other variables. we therefore leave it out.
+trend<-select(trend, -qsec)
+
+manual cars are the only cars having 5 gears and automatic cars are the only cars that have 3 gears. we therefore leave this variable out
+trend<-select(trend, -gear)
+
+displacement is the volume swept by the pistons inside the cylinders. We therefore discard this variable
+trend<-select(trend, -displ)
+
+hp is the outcome of physical characteristics of the engine in the car. disregard, since we have chars that are engine related (cyl, carb). we also see that hp is correlated to cylinders.
+
+#checking wt
+g = ggplot(trend, aes(x = cyl, y = hp, colour = am))
+g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+g = g + xlab("cyl") + ylab("cyl")
+g
+
+#Exploratory Analysis
+
+fitcyl<-lm(mpg ~ cyl , data = trend) ;
+
+x<-data.frame("var", "rsquared")
+
+rm("y")
+y <- cbind(var = "cyl",rsquared = summary(lm(mpg ~ cyl , data = trend))$r.squared)
+y <- cbind(var = "hp",rsquared = summary(lm(mpg ~ hp , data = trend))$r.squared)
+y <- cbind(var = "drat",rsquared = summary(lm(mpg ~ drat , data = trend))$r.squared)
+y <- cbind(var = "wt",rsquared = summary(lm(mpg ~ wt , data = trend))$r.squared)
+y <- cbind(var = "vs",rsquared = summary(lm(mpg ~ vs , data = trend))$r.squared)
+y <- cbind(var = "am",rsquared = summary(lm(mpg ~ am , data = trend))$r.squared)
+y <- cbind(var = "carb",rsquared = summary(lm(mpg ~ carb , data = trend))$r.squared)
+
+y
+
+fithp<-lm(mpg ~ hp , data = trend) ;summary(fithp) #0.58
+fitdrat<-lm(mpg ~ drat , data = trend) ;summary(fitdrat) #0.44
+fitwt<-lm(mpg ~ wt , data = trend) ;summary(fitwt) #0.74
+fitvs<-lm(mpg ~ vs , data = trend) ;summary(fitvs) #0.42
+fitam<-lm(mpg ~ am, data = trend);summary(fitam) #0.33
+fitcarb<-lm(mpg ~ carb, data = trend);summary(fitcarb) #0.33
+
+
+we will not fit am to mpg because of the low R squared value. 
+
+mpg ~ wt + cyl
+
+fit1 <- lm(mpg ~ wt , data = trend)
+
+hp en cyl related, dus kiezen
+
+fit2 <- lm(mpg ~ wt + cyl , data = trend)
+summary(fit2)
+
+anova(fit1, fit2)
+
+fit3 <- lm(mpg ~ wt + cyl + drat, data = trend)
+summary(fit3)
+
+anova(fit2, fit3)
+
+looking at the p value for anova, we conclude that we don't add drat
+
+
+
+lets explore transmission type against wt and cyl
+
+
+#checking wt
+g = ggplot(trend, aes(x = wt, y = mpg, colour = am))
+g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+g = g + xlab("wt") + ylab("mpg")
+g = g + geom_smooth(method="lm")
+g
+
+weight for manual is lower then automatic
+
+#checking cyl
+g = ggplot(trend, aes(x = I(as.numeric(cyl)), y = mpg, colour = am))
+g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+g = g + xlab("cyl") + ylab("mpg")
+g = g + geom_smooth(method="lm")
+g
+
+1 = 4 cyl, 2 = 6 cyl, 3 = 8 cyl
+
+
+most automtics have 8 cyl, manual 4 cyl
+
+lower weight and engine power makes manual give better mpg, not the transmission
+
+
+
+
+#checking residuals
+par(mfrow = c(2, 2))
+plot(lm(mpg ~ wt + cyl , data = trend))
+par(mfrow = c(1, 1))
+
+the residual plot show no pattern, the qq plot follows the line
+
+could be improved though
+
+
+#confidence
+(sumCoef <- summary(fit)$coefficients)
+sumCoef[1,1] + c(-1, 1) * qt(.975, df = fit$df) * sumCoef[1, 2] #conf interval intercept
+
+sumCoef[2,1] + c(-1, 1) * qt(.975, df = fit$df) * sumCoef[2, 2] #conf interval slope
+
+With 95% confidence, we estimate that 
+ - a 0.1 carat increase in diamond size results in a 355.6 to 388.6 increase in price in (Singapore) dollars.
+
+
+
+
+
+
+anova(fitwt, fitam)
+
+library(car)
+fit <- lm(mpg ~ . , data = trend)
+summary(fit)
+vif(fit)
+sqrt(vif(fit)) #I prefer sd 
+#hoeveel variatie voegt een variabele toe
+
+
+fit2 <- lm(mpg ~ wt + hp , data = trend)
+summary(fit2)
+
+
+
+#checking wt
+g = ggplot(trend, aes(x = wt, y = mpg, colour = am))
+g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+g = g + xlab("wt") + ylab("mpg")
+g
+
+trend[trend$am=="M",]
+
+plot(x=, y=xlab=" ",ylab=" ",pch=21)
+
+points(trend[trend$am=="A",]$wt, trend[trend$am=="A",]$mpg, col="black", cex=2)
+
+
+points(trend[trend$am=="M",]$wt, trend[trend$am=="M",]$mpg,col="red", cex=2)
+
+abline(lm(mpg ~ wt , data = trend), lwd = 2)
+abline(lm(mpg ~ wt , data = trend[trend$am=="A",]), lwd = 2)
+abline(lm(mpg ~ wt , data = trend[trend$am=="M",]), lwd = 2)
+
+#checking hp
+g = ggplot(trend, aes(x = hp, y = mpg, colour = am))
+g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+g = g + xlab("hp") + ylab("mpg")
+g = g + geom_line()
+g
+
+plot(trend$hp, trend$mpg, frame=FALSE,xlab=" ",ylab=" ",pch=21,col=trend$am, cex=2)
+abline(lm(mpg ~ hp , data = trend), lwd = 2)
+abline(lm(mpg ~ hp , data = trend[trend$am=="A",]), lwd = 2)
+abline(lm(mpg ~ hp , data = trend[trend$am=="M",]), lwd = 2)
+
+
+
+
+
+#checking m
+g = ggplot(trend, aes(x = mpg, y = resid(fit2), colour = am))
+g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+g = g + xlab("mpg") + ylab("resid(fit2)")
+g
+
+
+
+we blijven aan model toevoegen op volgorder van minst variatie toevoegend
+am + vs + drat + wt + hp + disp + cyl + carb
+
+fit2 <- lm(mpg ~ am , data = trend)
+summary(fit2)
+
+
+fit3 <- lm(mpg ~ am + vs, data = trend)
+summary(fit3)
+vif(fit3)
+
+anova(fit2, fit3)
+
+fit4 <- lm(mpg ~ am + vs + drat, data = trend)
+summary(fit4)
+vif(fit4)
+
+anova(fit3, fit4)
+
+we laten drat eruit o.b.v. p value
+
+fit5 <- lm(mpg ~ am + vs + wt, data = trend)
+summary(fit5)
+vif(fit5)
+
+anova(fit3, fit5)
+
+
+fit6 <- lm(mpg ~ am + vs + wt + hp, data = trend)
+summary(fit6)
+vif(fit6)
+
+anova(fit5, fit6)
+
+
+fit7 <- lm(mpg ~ am + vs + wt + hp + disp, data = trend)
+summary(fit7)
+vif(fit7)
+
+anova(fit6, fit7)
+
+stoppen bij fit6, hoge p value, gaan tm  mpg ~ am + vs + wt + hp
+
+
+verschil tussen a en m analyseren binnen dit model
+
+plotten risiduals
+plot(trend$mpg, resid(fit6),  
+     xlab = "MPG", 
+     ylab = "Residuals (SIN $)", 
+     bg = "lightblue", 
+     col = "black", cex = 1.1, pch = 21,frame = FALSE)
+
+#checking residuals
+g = ggplot(trend, aes(x = mpg, y = resid(fit6), colour = am))
+g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+g = g + xlab("mpg") + ylab("resid(fit6)")
+g
+
+
+#cyl
+g = ggplot(trend, aes(x = cyl, y = mpg, colour = am))
+g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+g = g + xlab("cyl") + ylab("mpg")
+g
+
+
+
+
+plot(trend$am, trend$mpg)
+abline(lm(trend$mpg ~trend$am))
+summary(lm(trend$mpg ~trend$am))
+
+
+pairs(trend2, panel=panel.smooth, main = "trend data") #plot
+
+install.packages("GGally")
+library(GGally)
+
+g = ggpairs(trend, lower = list(continuous = "smooth"),params = c(method = "loess"))
+g
+
+summary(lm(mpg ~ . , data = trend))
+
+plot(trend$cyl, trend$mpg, color=trend$am)
+
+
+#cyl
+g = ggplot(trend, aes(x = cyl, y = mpg, colour = am))
+g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+g = g + xlab("cyl") + ylab("mpg")
+g
+
+#disp
+g = ggplot(trend, aes(x = vs, y = am, colour = vs))
+g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+g = g + xlab("vs") + ylab("am")
+g
+
+
+#wt
+g = ggplot(trend, aes(x = wt, y = mpg, colour = am))
+g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+g = g + xlab("wt") + ylab("mpg")
+g
+
+
+#wt
+g = ggplot(trend, aes(x = hp, y = qsec, colour = am))
+g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+g = g + xlab("hp") + ylab("qsec")
+g
+
+#wt
+g = ggplot(trend, aes(x = wt, y = mpg, colour = am))
+g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+g = g + xlab("wt") + ylab("mpg")
+g
+
+
+for (i in 1:length(names(trend)){
+        
+        cor(trend$mpg), trend[,i])        
+}
+
+cor(trend$mpg, names(trend))
+
+plot(trend$disp, trend$mpg)
+plot(trend$hp, trend$mpg)
+plot(trend$drat, trend$mpg)
+plot(trend$wt, trend$mpg)
+plot(trend$qsec, trend$mpg)
+plot(trend$vs, trend$mpg)
+plot(trend$am, trend$mpg)
+plot(trend$gear, trend$mpg)
+plot(trend$carb, trend$mpg)
+
+plot(trend$gear, trend$am)
+
+plot(trend$wt, trend$am)
+
+
+
+
+summary(lm(mpg ~ cyl + disp + hp + wt + +carb + am, data = trend))
+
+#Analysis
+We leave out gears and compare only on 4 gears
+
+trend[trend$gear==5,] #Only manual transmissions have 5 gears
+trend[trend$gear==3,] #Only automatic transmissions have 3 gears
+
+We leave out qsec since that is an outcome of the characteristics of the car
+
+
+
+
+
+
+# Results
+
+
+
+##plotting residuals
+plot(lm(mpg ~ cyl, data=trend)
+)
+Plotten residuals
+plot(trend$mpg, resid(lm(mpg ~x )),  
+     xlab = "MPG", 
+     ylab = "Residuals (SIN $)", 
+     bg = "lightblue", 
+     col = "black", cex = 1.1, pch = 21,frame = FALSE)
+
+##Getting a confidence interval
+(sumCoef <- summary(fit)$coefficients)
+sumCoef[1,1] + c(-1, 1) * qt(.975, df = fit$df) * sumCoef[1, 2] #conf interval intercept
+
+sumCoef[2,1] + c(-1, 1) * qt(.975, df = fit$df) * sumCoef[2, 2] #conf interval slope
+
+With 95% confidence, we estimate that 
+ - a 0.1 carat increase in diamond size results in a 355.6 to 388.6 increase in price in (Singapore) dollars.
+
+##Plotting prediction and confidence interval
+plot(x, y, frame=FALSE,xlab="Carat",ylab="Dollars",pch=21,col="black", bg="lightblue", cex=2)
+abline(fit, lwd = 2)
+xVals <- seq(min(x), max(x), by = .01)
+y <- diamond$price; x <- diamond$carat; n <- length(y)
+newdata <- data.frame(x = xVals)
+(p1 <- predict(fit, newdata, interval = ("confidence")))
+(p2 <- predict(fit, newdata, interval = ("prediction")))
+plot(x, y, frame=FALSE,xlab="Carat",ylab="Dollars",pch=21,col="black", bg="lightblue", cex=2)
+abline(fit, lwd = 2)
+lines(xVals, p1[,2]); lines(xVals, p1[,3]) #lower en upper confidence
+lines(xVals, p2[,2]); lines(xVals, p2[,3]) #lower en upper prediction
+
+als je X data genoeg variatie heeft, dan wordt het makkelijker om de predict line te maken
+als gemeten waarden heel dicht bij elkaar liggen, dan wordt het moeilijk.
+als je 2 groepen data hebt die ver uit elkaar liggen, dan ook lastig om regressie lijn te trekken
+
+
+## Diagnostics
+
+plot(fit) #residuals vs fitted, qqplot
+
+
+
+## Paragraph
+
+
+* Did the student interpret the coefficients correctly?
+* Did the student do some exploratory data analyses?
+* Did the student fit multiple models and detail their strategy for model selection?
+* Did the student answer the questions of interest or detail why the question(s) is (are) not answerable?
+* Did the student do a residual plot and some diagnostics?
+* Did the student quantify the uncertainty in their conclusions and/or perform an inference correctly?
+* Was the report brief (about 2 pages long) for the main body of the report and no longer than 5 with supporting appendix of figures?
+* Did the report include an executive summary?
+* Was the report done in Rmd (knitr)?
+
+
+
+```{r}
+summary(cars)
+```
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+plot(cars)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+ <http://rmarkdown.rstudio.com>

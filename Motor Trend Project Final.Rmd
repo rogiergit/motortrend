@@ -1,0 +1,158 @@
+---
+title: "Motor Trend Project"
+author: "Rogier Helmus"
+
+output: html_document
+---
+```{r, render=FALSE, echo=FALSE, results=FALSE, eval=FALSE}
+#render=FALSE, echo=FALSE, results=FALSE, eval=FALSE
+setwd("E:\\Dev\\R\\Coursera\\7 Regression\\MotorTrend\\motortrend\\")
+library(data.table)
+library(dplyr)          # Working with tables
+library(ggplot2)        # Working with plots
+library(R.utils)
+
+```
+
+
+###1 Motor Trend Analysis
+In this article we're going to examine what physical car characteristics influence the miles per gallon (MPG). We are particularly interested in answering the following two questions:
+
+1. "Is an automatic or manual transmission better for MPG"
+2. "Quantify the MPG difference between automatic and manual transmissions"
+
+###2 Executive summary
+From our analysis we find that the amount of miles per gallon is best described by looking at the weight of the car and the amound of cylinders in the engine. The transmission type of the car seems to describe the MPG, but not as accurate as the weight and cylinders. We also find that:
+* Manual transmission cars have a lower weight and less cylinders
+* Automatic transmission cars have a hight weight and more cylinders.
+
+Manual transmission cars do have a better MPG, but that is because of the general lower weight and amount of cylinders in these cars.
+
+
+###3 Data
+For this analysis we'll be using the mtcars dataset from R and loading that into a dataset called trend for this analysis. In the dataset we converted the following variables from numeric values to factors: vs, cyl, am, vs, gear and carb. 
+
+A description of the variables can be read in R (?mtcars)
+
+```{r,echo=FALSE, results=FALSE}
+library(dplyr);data(mtcars)
+trend <- tbl_df(mtcars)
+trend$vs<-factor(trend$vs)
+trend$cyl<-factor(trend$cyl)
+trend$am<-factor(ifelse(trend$am==0, "A", "M"))
+trend$vs<-factor(ifelse(trend$vs==0, "V", "S"))
+trend$gear<-factor(trend$gear)
+trend$carb<-factor(trend$carb)
+```
+
+###4 Exploratory Analysis
+
+###4.1 Gear
+From out exploratory analysis we find that 3 gears are only found in automatic transmissions and 5 gears are only found in manual transmissions. We will not be able to compare the transmission against gears and we therefore exlude this variable from the analysis.
+```{r,echo=FALSE, results=FALSE, render=FALSE}
+library(dplyr)
+```
+
+```{r,echo=FALSE, results=FALSE}
+gear <- tbl_df(trend)
+gear <- group_by(trend, gear, am) 
+summarize(gear, count = n())
+```
+
+###4.2 Qsec and HP
+Qsec is the time it takes to travel a 1/4 of a mile. This variable is the outcome of the physical characteristics of the car and will therefore be disregarded. HP is the amount of horsepower of the engine. This is also the outcome of physical characteristics of the car and will therefore be disregarded. 
+
+###4.3 MPG versus transmission type
+For our analysis we want to create a model that best describes the MPG per car. When we analyse the relation between MPG and the transmission (variable am) we find:
+
+```{r,echo=FALSE}
+fit <- lm(mpg ~ am , data = trend); 
+#summary(fit)$coef;
+print(paste("R-squared = ",summary(fit)$r.squared))
+```
+
+In this model the automatic transmission is the intercept. This model shows that manual transmission will give a higher MPG. We will however not use this model for our analysis, since the R squared statistic for this model is low. We will look for a better model describing MPG and will then examine differences in the transmission.
+
+###5 Model
+
+We will look at the individual R squared statistics for each variable describing the MPG. We will then start with the variable with the highest R squared value. We will add variables to the model if adding the new variable will keep improving the model.
+
+```{r,echo=FALSE}
+y=data.frame(var = character(), rsquared=numeric())
+y1 <- cbind(var = "cyl",rsquared = as.numeric(summary(lm(mpg ~ cyl , data = trend))$r.squared))
+y2 <- cbind(var = "drat",rsquared = as.numeric(summary(lm(mpg ~ drat , data = trend))$r.squared))
+y3 <- cbind(var = "wt",rsquared = as.numeric(summary(lm(mpg ~ wt , data = trend))$r.squared))
+y4 <- cbind(var = "vs",rsquared = as.numeric(summary(lm(mpg ~ vs , data = trend))$r.squared))
+y5 <- cbind(var = "am",rsquared = as.numeric(summary(lm(mpg ~ am , data = trend))$r.squared))
+y6 <- cbind(var = "carb",rsquared = as.numeric(summary(lm(mpg ~ carb , data = trend))$r.squared))
+(y<-rbind(y1,y2,y3,y4,y5,y6))
+```
+
+The order in which we will add variables is: wt, cyl,drat, carb, vs, am. To compare the created models we'll perform an Anova analysis on the fit. When the P-value for the comparison is low, we will keep the model with the added variable. 
+
+We have created a compared the following models:
+```{r,results=FALSE}
+fit1 <- lm(mpg ~ wt , data = trend)
+fit2 <- lm(mpg ~ wt + cyl , data = trend) 
+fit3 <- lm(mpg ~ wt + cyl + drat, data = trend)
+```
+
+From the P-value of the Anova analysis from fit1 to fit 2 we conclude that the model is improved by adding the cyl variable: 
+```{r,echo=FALSE}
+anova(fit1, fit2)
+```
+
+From the P-value of the Anova analysis from fit2 to fit3 we conclude that adding the drat variable doesn't improve the model:
+```{r,echo=FALSE}
+anova(fit2, fit3)
+```
+
+Adding other variables (carb, vs, am) also doesn't improve the model.
+
+###6 Results
+In our constructed model the Weight and cylinder variable best describe the MPG of the cars in the mtcars dataset. We will now explore the type of transmission using these variables.
+
+```{r,echo=FALSE}
+library(gridExtra)
+library(ggplot2)
+g = ggplot(trend, aes(x = wt, y = mpg, colour = am))
+g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+g = g + xlab("Weight") + ylab("MPG")
+g = g + geom_smooth(method="lm")
+
+
+h = ggplot(trend, aes(x = I(as.numeric(cyl)), y = mpg, colour = am))
+h = h + geom_point(size = 6, colour = "black") + geom_point(size = 4)
+h = h + xlab("Cylinders") + ylab("MPG")
+h = h + geom_smooth(method="lm")
+
+grid.arrange(g, h, ncol=2)
+```
+
+###6.1 MPG and Weight by transmission type (am)
+We can see that there's a distinction between automatic and manual transmission while analysing the weight variable against the MPG variable. 
+
+```{r,echo=FALSE}
+weight<-group_by(trend, am)
+summarize(weight, mean(wt), mean(mpg))
+```
+
+Manual transmission cars on average have a lower weight which explains why the MPG is better than automatic transmission.
+
+###6.2 MPG and Cyl by transmission type (am)
+  
+Legend: 1 = 4 cylinders, 2 = 6 cylinders, 3 = 8 cylinders  
+
+```{r,echo=FALSE}
+cyl<-group_by(trend, am)
+summarize(cyl, mean(as.numeric(cyl)), mean(mpg))
+```
+
+Manual transmission cars on average have less cylinders which explains the better MPG compared to automatic transmissions.
+
+
+
+
+
+
+
