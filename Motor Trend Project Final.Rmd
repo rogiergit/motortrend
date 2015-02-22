@@ -109,12 +109,21 @@ anova(fit2, fit3)
 
 Adding other variables (carb, vs, am) also doesn't improve the model.
 
+Residuals plot and a QQ plot for the final model using the variables wt and cyl:
+```{r,echo=FALSE}
+library(ggplot2)
+par(mfrow=c(1,2))
+plot(x = trend$mpg, y = resid(fit2), col = trend$am) 
+qqnorm(resid(fit2)); 
+qqline(resid(fit2))
+```
+
+
 ###6 Results
 In our constructed model the Weight and cylinder variable best describe the MPG of the cars in the mtcars dataset. We will now explore the type of transmission using these variables.
 
 ```{r,echo=FALSE}
 library(gridExtra)
-library(ggplot2)
 g = ggplot(trend, aes(x = wt, y = mpg, colour = am))
 g = g + geom_point(size = 6, colour = "black") + geom_point(size = 4)
 g = g + xlab("Weight") + ylab("MPG")

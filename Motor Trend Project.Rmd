@@ -75,16 +75,17 @@ g
 fitcyl<-lm(mpg ~ cyl , data = trend) ;
 
 x<-data.frame("var", "rsquared")
-
+?rbind
 rm("y")
-y <- cbind(var = "cyl",rsquared = summary(lm(mpg ~ cyl , data = trend))$r.squared)
-y <- cbind(var = "hp",rsquared = summary(lm(mpg ~ hp , data = trend))$r.squared)
-y <- cbind(var = "drat",rsquared = summary(lm(mpg ~ drat , data = trend))$r.squared)
-y <- cbind(var = "wt",rsquared = summary(lm(mpg ~ wt , data = trend))$r.squared)
-y <- cbind(var = "vs",rsquared = summary(lm(mpg ~ vs , data = trend))$r.squared)
-y <- cbind(var = "am",rsquared = summary(lm(mpg ~ am , data = trend))$r.squared)
-y <- cbind(var = "carb",rsquared = summary(lm(mpg ~ carb , data = trend))$r.squared)
-
+y=data.frame(var = character(), rsquared=numeric())
+y1 <- cbind(var = "cyl",rsquared = summary(lm(mpg ~ cyl , data = trend))$r.squared)
+y2 <- cbind(var = "hp",rsquared = summary(lm(mpg ~ hp , data = trend))$r.squared)
+y3 <- cbind(var = "drat",rsquared = summary(lm(mpg ~ drat , data = trend))$r.squared)
+y4 <- cbind(var = "wt",rsquared = summary(lm(mpg ~ wt , data = trend))$r.squared)
+y5 <- cbind(var = "vs",rsquared = summary(lm(mpg ~ vs , data = trend))$r.squared)
+y6 <- cbind(var = "am",rsquared = summary(lm(mpg ~ am , data = trend))$r.squared)
+y7 <- cbind(var = "carb",rsquared = summary(lm(mpg ~ carb , data = trend))$r.squared)
+y<-rbind(y1,y2,y3,y4,y5,y6)
 y
 
 fithp<-lm(mpg ~ hp , data = trend) ;summary(fithp) #0.58
@@ -170,11 +171,15 @@ With 95% confidence, we estimate that
 
 
 
+
+
+
+
+
 anova(fitwt, fitam)
 
 library(car)
-fit <- lm(mpg ~ . , data = trend)
-summary(fit)
+fit <- lm(mpg ~ am , data = trend); summary(fit)$coef;summary(fit)$r-squared
 vif(fit)
 sqrt(vif(fit)) #I prefer sd 
 #hoeveel variatie voegt een variabele toe
